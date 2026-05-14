@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -37,7 +37,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter basename="/Wandr/">
+          <HashRouter>
             <Routes>
               {/* ── Participant routes ── */}
               <Route path="/" element={<Index />} />
@@ -64,7 +64,7 @@ const App = () => (
             </Routes>
             {/* Secret keyword trigger — type "natpac" anywhere to reveal admin portal link */}
             <AdminSecretTrigger />
-          </BrowserRouter>
+          </HashRouter>
         </TooltipProvider>
       </TripsProvider>
     </AdminAuthProvider>
