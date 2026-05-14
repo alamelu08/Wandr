@@ -1,5 +1,4 @@
-# Workflow for building and deploying a Vite React App to GitHub Pages
-name: Deploy Vite App to Pages
+name: Deploy Wandr to Pages
 
 on:
   push:
@@ -16,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,12 +27,14 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
-        working-directory: ./frontend
+        run: |
+          cd frontend
+          npm install
 
-      - name: Build project
-        run: npm run build
-        working-directory: ./frontend
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -43,13 +44,6 @@ jobs:
         with:
           path: './frontend/dist'
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
