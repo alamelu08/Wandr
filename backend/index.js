@@ -578,6 +578,66 @@ function createApp(options = {}) {
     }
   });
 
+  app.get('/api/admin/run-migration', async (req, res) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const { loadData } = require('./db');
+
+      const initSql = fs.readFileSync(path.join(__dirname, 'init_db.sql'), 'utf8');
+      await db.query(initSql);
+
+      const data = loadData();
+
+      for (const [hashedId, p] of Object.entries(data.participants || {})) {
+        await db.query(
+          `INSERT INTO participants (id, alias, consent_status, created_at, last_consent_update)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+          [p.id, p.alias, p.consentStatus || 'yes', p.createdAt || new Date().toISOString(), p.lastConsentUpdate || new Date().toISOString()]
+        );
+        const passwordHash = data.participantAuth?.[hashedId];
+        if (passwordHash) {
+          await db.query(
+            `INSERT INTO participant_auth (participant_id, password_hash)
+             VALUES ($1, $2) ON CONFLICT (participant_id) DO NOTHING`,
+            [p.id, passwordHash]
+          );
+        }
+      }
+
+      for (const [hashedId, trips] of Object.entries(data.trips || {})) {
+        for (const t of trips) {
+          await db.query(
+            `INSERT INTO trips (id, participant_id, trip_data, synced_at, created_at)
+             VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+            [t.id, hashedId, JSON.stringify(t), t.syncedAt || new Date().toISOString(), t.createdAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      for (const entry of data.auditLog || []) {
+        await db.query(
+          `INSERT INTO audit_log (id, timestamp, admin_id, role, action, details, prev_hash, chain_hash)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
+          [entry.id, entry.timestamp, entry.adminId, entry.role, entry.action, entry.details, entry.prevHash, entry.chainHash]
+        );
+      }
+
+      for (const user of data.adminUsers || []) {
+        await db.query(
+          `INSERT INTO admin_users (username, password, role, added_at, added_by)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (username) DO NOTHING`,
+          [user.username, user.password, user.role, user.addedAt, user.addedBy]
+        );
+      }
+
+      return res.json({ success: true, message: 'Migration completed on Render!' });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
